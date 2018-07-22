@@ -28,17 +28,6 @@ def emit_state(state):
         sys.stdout.flush()
 
 
-def flatten(d, parent_key='', sep='__'):
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flatten(v, new_key, sep=sep).items())
-        else:
-            items.append((new_key, str(v) if type(v) is list else v))
-    return dict(items)
-
-
 def persist_lines(config, lines):
     state = None
     schemas = {}
@@ -47,8 +36,8 @@ def persist_lines(config, lines):
     validators = {}
     csv_files_to_load = {}
     row_count = {}
-    sync = DbSync(config)
-    sync.create_schema_if_not_exists()
+    stream_to_sync = {}
+    batch_size = config['batch_size'] if 'batch_size' in config else 100000
 
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
@@ -77,13 +66,17 @@ def persist_lines(config, lines):
             # Validate record
             validators[o['stream']].validate(o['record'])
 
-            csv_line = sync.record_to_csv_line(o['record'], schema)
+            sync = stream_to_sync[o['stream']]
+
+            csv_line = sync.record_to_csv_line(o['record'])
+            logger.info(csv_line)
             csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
             row_count[o['stream']] += 1
 
-            if row_count[o['stream']] >= 100000:
-                sync.load_csv(schema, csv_files_to_load[o['stream']], row_count[o['stream']])
+            if row_count[o['stream']] >= batch_size:
+                sync.load_csv(csv_files_to_load[o['stream']], row_count[o['stream']])
                 row_count[o['stream']] = 0
+                csv_files_to_load[o['stream']] = TemporaryFile(mode='w+b')
 
             state = None
         elif t == 'STATE':
@@ -98,7 +91,9 @@ def persist_lines(config, lines):
             if 'key_properties' not in o:
                 raise Exception("key_properties field is required")
             key_properties[stream] = o['key_properties']
-            sync.sync_table(o)
+            stream_to_sync[stream] = DbSync(config, o)
+            stream_to_sync[stream].create_schema_if_not_exists()
+            stream_to_sync[stream].sync_table()
             row_count[stream] = 0
             csv_files_to_load[stream] = TemporaryFile(mode='w+b')
         elif t == 'ACTIVATE_VERSION':
@@ -109,7 +104,7 @@ def persist_lines(config, lines):
 
     for (stream_name, count) in row_count.items():
         if count > 0:
-            sync.load_csv(schemas[stream_name], csv_files_to_load[stream_name], count)
+            stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count)
 
     return state
 
