@@ -1,0 +1,8 @@
+{
+  "host": "localhost",
+  "user": "test",
+  "port": "5432",
+  "password": "",
+  "dbname": "target_test",
+  "schema": "test_schema"
+}
