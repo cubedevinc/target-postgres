@@ -11,6 +11,8 @@ setup(
     py_modules=["target_postgres"],
     install_requires=[
         "singer-python>=5.0.12",
+        "psycopg2>=2.7.4",
+        "inflection>=0.3.1"
     ],
     entry_points="""
     [console_scripts]
