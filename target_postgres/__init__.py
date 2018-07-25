@@ -69,7 +69,6 @@ def persist_lines(config, lines):
             sync = stream_to_sync[o['stream']]
 
             csv_line = sync.record_to_csv_line(o['record'])
-            logger.info(csv_line)
             csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
             row_count[o['stream']] += 1
 

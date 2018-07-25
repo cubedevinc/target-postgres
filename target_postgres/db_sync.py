@@ -31,6 +31,7 @@ def inflect_column_name(name):
         .replace('properties', 'props')\
         .replace('timestamp', 'ts')\
         .replace('date', 'dt')\
+        .replace('from', 'from_col')\
         .replace('associated', 'assoc')
 
 
