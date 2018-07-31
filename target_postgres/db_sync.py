@@ -13,12 +13,14 @@ logger = singer.get_logger()
 def column_type(schema_property):
     property_type = schema_property['type']
     property_format = schema_property['format'] if 'format' in schema_property else None
-    if property_format == 'date-time':
+    if 'object' in property_type or 'array' in property_type:
+        return 'JSONB'
+    elif property_format == 'date-time':
         return 'timestamp'
     elif 'number' in property_type:
         return 'decimal'
     elif 'integer' in property_type:
-        return 'integer'
+        return 'bigint'
     elif 'boolean' in property_type:
         return 'bool'
     else:
@@ -50,7 +52,7 @@ def flatten_schema(d, parent_key='', sep='__'):
     items = []
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
-        if v['type'] == 'object':
+        if 'object' in v['type']:
             items.extend(flatten_schema(v, new_key, sep=sep).items())
         else:
             items.append((new_key, v))
@@ -71,7 +73,7 @@ def flatten_record(d, parent_key='', sep='__'):
         if isinstance(v, collections.MutableMapping):
             items.extend(flatten_record(v, new_key, sep=sep).items())
         else:
-            items.append((new_key, str(v) if type(v) is list else v))
+            items.append((new_key, json.dumps(v) if type(v) is list else v))
     return dict(items)
 
 
