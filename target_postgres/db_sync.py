@@ -42,18 +42,24 @@ def column_clause(name, schema_property):
 
 
 def flatten_key(k, parent_key, sep):
-    if len(parent_key + k) > 40:
-        reduced_key = re.sub(r'[a-z]', '', inflection.camelize(k))
-        k = reduced_key if len(reduced_key) > 1 else k[0:3]
-    return parent_key + sep + inflect_column_name(k) if parent_key else inflect_column_name(k)
+    full_key = parent_key + [k]
+    inflected_key = [inflect_column_name(n) for n in full_key]
+    reducer_index = 0
+    while len(sep.join(inflected_key)) >= 63 and reducer_index < len(inflected_key):
+        reduced_key = re.sub(r'[a-z]', '', inflection.camelize(inflected_key[reducer_index]))
+        inflected_key[reducer_index] = \
+            (reduced_key if len(reduced_key) > 1 else inflected_key[reducer_index][0:3]).lower()
+        reducer_index += 1
+
+    return sep.join(inflected_key)
 
 
-def flatten_schema(d, parent_key='', sep='__'):
+def flatten_schema(d, parent_key=[], sep='__'):
     items = []
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
         if 'object' in v['type']:
-            items.extend(flatten_schema(v, new_key, sep=sep).items())
+            items.extend(flatten_schema(v, parent_key + [k], sep=sep).items())
         else:
             items.append((new_key, v))
 
@@ -66,12 +72,12 @@ def flatten_schema(d, parent_key='', sep='__'):
     return dict(sorted_items)
 
 
-def flatten_record(d, parent_key='', sep='__'):
+def flatten_record(d, parent_key=[], sep='__'):
     items = []
     for k, v in d.items():
         new_key = flatten_key(k, parent_key, sep)
         if isinstance(v, collections.MutableMapping):
-            items.extend(flatten_record(v, new_key, sep=sep).items())
+            items.extend(flatten_record(v, parent_key + [k], sep=sep).items())
         else:
             items.append((new_key, json.dumps(v) if type(v) is list else v))
     return dict(items)
