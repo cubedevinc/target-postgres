@@ -32,9 +32,13 @@ def inflect_column_name(name):
     return new_name\
         .replace('properties', 'props')\
         .replace('timestamp', 'ts')\
-        .replace('date', 'dt')\
-        .replace('from', 'from_col')\
         .replace('associated', 'assoc')
+
+
+def safe_column_name(name):
+    if name == 'from':
+        return 'from_col'
+    return name
 
 
 def column_clause(name, schema_property):
@@ -51,7 +55,7 @@ def flatten_key(k, parent_key, sep):
             (reduced_key if len(reduced_key) > 1 else inflected_key[reducer_index][0:3]).lower()
         reducer_index += 1
 
-    return sep.join(inflected_key)
+    return safe_column_name(sep.join(inflected_key))
 
 
 def flatten_schema(d, parent_key=[], sep='__'):
