@@ -252,7 +252,7 @@ class DbSync:
     def get_table_columns(self, table_name):
         return self.query("""SELECT column_name, data_type 
       FROM information_schema.columns 
-      WHERE table_name = %s AND table_schema = %s""", (table_name, self.schema_name))
+      WHERE lower(table_name) = %s AND lower(table_schema) = %s""", (table_name.lower(), self.schema_name.lower()))
 
     def update_columns(self):
         stream_schema_message = self.stream_schema_message
