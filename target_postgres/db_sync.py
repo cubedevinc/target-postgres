@@ -270,7 +270,7 @@ class DbSync:
 
         columns_to_add = [
             column_clause(
-                name,
+                '"'+name+'"',
                 properties_schema
             )
             for (name, properties_schema) in self.flatten_schema.items()
