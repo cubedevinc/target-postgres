@@ -318,7 +318,7 @@ class DbSync:
         stream_schema_message = self.stream_schema_message
         columns = [
             column_clause(
-                name,
+                '"'+name+'"',
                 schema
             )
             for (name, schema) in self.flatten_schema.items()
@@ -362,7 +362,7 @@ class DbSync:
 
         columns_to_add = [
             column_clause(
-                name,
+                '"'+name+'"',
                 properties_schema
             )
             for (name, properties_schema) in self.flatten_schema.items()
