@@ -9,6 +9,102 @@ import itertools
 
 logger = singer.get_logger()
 
+postgres_keywords = [k.lower() for k in [
+    'ALL',
+    'ANALYSE',
+    'ANALYZE',
+    'AND',
+    'ANY',
+    'ARRAY',
+    'AS',
+    'ASC',
+    'ASYMMETRIC',
+    'AUTHORIZATION',
+    'BETWEEN',
+    'BINARY',
+    'BOTH',
+    'CASE',
+    'CAST',
+    'CHECK',
+    'COLLATE',
+    'COLUMN',
+    'CONSTRAINT',
+    'CREATE',
+    'CROSS',
+    'CURRENT_DATE',
+    'CURRENT_ROLE',
+    'CURRENT_TIME',
+    'CURRENT_TIMESTAMP',
+    'CURRENT_USER',
+    'DEFAULT',
+    'DEFERRABLE',
+    'DESC',
+    'DISTINCT',
+    'DO',
+    'ELSE',
+    'END',
+    'EXCEPT',
+    'FALSE',
+    'FOR',
+    'FOREIGN',
+    'FREEZE',
+    'FROM',
+    'FULL',
+    'GRANT',
+    'GROUP',
+    'HAVING',
+    'ILIKE',
+    'IN',
+    'INITIALLY',
+    'INNER',
+    'INTERSECT',
+    'INTO',
+    'IS',
+    'ISNULL',
+    'JOIN',
+    'LEADING',
+    'LEFT',
+    'LIKE',
+    'LIMIT',
+    'LOCALTIME',
+    'LOCALTIMESTAMP',
+    'NATURAL',
+    'NEW',
+    'NOT',
+    'NOTNULL',
+    'NULL',
+    'OFF',
+    'OFFSET',
+    'OLD',
+    'ON',
+    'ONLY',
+    'OR',
+    'ORDER',
+    'OUTER',
+    'OVERLAPS',
+    'PLACING',
+    'PRIMARY',
+    'REFERENCES',
+    'RIGHT',
+    'SELECT',
+    'SESSION_USER',
+    'SIMILAR',
+    'SOME',
+    'SYMMETRIC',
+    'TABLE',
+    'THEN',
+    'TO',
+    'TRAILING',
+    'TRUE',
+    'UNION',
+    'UNIQUE',
+    'USER',
+    'USING',
+    'VERBOSE',
+    'WHEN',
+    'WHERE'
+]]
+
 
 def column_type(schema_property):
     property_type = schema_property['type']
@@ -28,16 +124,12 @@ def column_type(schema_property):
 
 
 def inflect_column_name(name):
-    new_name = inflection.underscore(name)
-    return new_name\
-        .replace('properties', 'props')\
-        .replace('timestamp', 'ts')\
-        .replace('associated', 'assoc')
+    return inflection.underscore(name)
 
 
 def safe_column_name(name):
-    if name == 'from':
-        return 'from_col'
+    if name.lower() in postgres_keywords:
+        return '"{}"'.format(name)
     return name
 
 
