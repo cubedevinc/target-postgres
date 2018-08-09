@@ -62,10 +62,18 @@ def flatten_schema(d, parent_key=[], sep='__'):
     items = []
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
-        if 'object' in v['type']:
-            items.extend(flatten_schema(v, parent_key + [k], sep=sep).items())
+        if 'type' in v.keys():
+            if 'object' in v['type']:
+                items.extend(flatten_schema(v, parent_key + [k], sep=sep).items())
+            else:
+                items.append((new_key, v))
         else:
-            items.append((new_key, v))
+            if list(v.values())[0][0]['type'] == 'string':
+                list(v.values())[0][0]['type'] = ['null', 'string']
+                items.append((new_key, list(v.values())[0][0]))
+            elif list(v.values())[0][0]['type'] == 'array':
+                list(v.values())[0][0]['type'] = ['null', 'array']
+                items.append((new_key, list(v.values())[0][0]))
 
     key_func = lambda item: item[0]
     sorted_items = sorted(items, key=key_func)
@@ -171,7 +179,7 @@ class DbSync:
         columns = self.column_names()
         table = self.table_name(stream_schema_message['stream'], False)
         temp_table = self.table_name(stream_schema_message['stream'], True)
-        return """INSERT INTO {} ({}) 
+        return """INSERT INTO {} ({})
         (SELECT s.* FROM {} s LEFT OUTER JOIN {} t ON {} WHERE {})
         """.format(
             table,
@@ -187,7 +195,7 @@ class DbSync:
         columns = self.column_names()
         table = self.table_name(stream_schema_message['stream'], False)
         temp_table = self.table_name(stream_schema_message['stream'], True)
-        return """UPDATE {} SET {} FROM {} s 
+        return """UPDATE {} SET {} FROM {} s
         WHERE {}
         """.format(
             table,
@@ -218,7 +226,7 @@ class DbSync:
         stream_schema_message = self.stream_schema_message
         columns = [
             column_clause(
-                name,
+                '"'+name+'"',
                 schema
             )
             for (name, schema) in self.flatten_schema.items()
@@ -250,8 +258,8 @@ class DbSync:
         )
 
     def get_table_columns(self, table_name):
-        return self.query("""SELECT column_name, data_type 
-      FROM information_schema.columns 
+        return self.query("""SELECT column_name, data_type
+      FROM information_schema.columns
       WHERE lower(table_name) = %s AND lower(table_schema) = %s""", (table_name.lower(), self.schema_name.lower()))
 
     def update_columns(self):
@@ -285,4 +293,3 @@ class DbSync:
         else:
             logger.info("Table '{}' exists".format(stream))
             self.update_columns()
-
