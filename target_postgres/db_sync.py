@@ -9,102 +9,6 @@ import itertools
 
 logger = singer.get_logger()
 
-postgres_keywords = [k.lower() for k in [
-    'ALL',
-    'ANALYSE',
-    'ANALYZE',
-    'AND',
-    'ANY',
-    'ARRAY',
-    'AS',
-    'ASC',
-    'ASYMMETRIC',
-    'AUTHORIZATION',
-    'BETWEEN',
-    'BINARY',
-    'BOTH',
-    'CASE',
-    'CAST',
-    'CHECK',
-    'COLLATE',
-    'COLUMN',
-    'CONSTRAINT',
-    'CREATE',
-    'CROSS',
-    'CURRENT_DATE',
-    'CURRENT_ROLE',
-    'CURRENT_TIME',
-    'CURRENT_TIMESTAMP',
-    'CURRENT_USER',
-    'DEFAULT',
-    'DEFERRABLE',
-    'DESC',
-    'DISTINCT',
-    'DO',
-    'ELSE',
-    'END',
-    'EXCEPT',
-    'FALSE',
-    'FOR',
-    'FOREIGN',
-    'FREEZE',
-    'FROM',
-    'FULL',
-    'GRANT',
-    'GROUP',
-    'HAVING',
-    'ILIKE',
-    'IN',
-    'INITIALLY',
-    'INNER',
-    'INTERSECT',
-    'INTO',
-    'IS',
-    'ISNULL',
-    'JOIN',
-    'LEADING',
-    'LEFT',
-    'LIKE',
-    'LIMIT',
-    'LOCALTIME',
-    'LOCALTIMESTAMP',
-    'NATURAL',
-    'NEW',
-    'NOT',
-    'NOTNULL',
-    'NULL',
-    'OFF',
-    'OFFSET',
-    'OLD',
-    'ON',
-    'ONLY',
-    'OR',
-    'ORDER',
-    'OUTER',
-    'OVERLAPS',
-    'PLACING',
-    'PRIMARY',
-    'REFERENCES',
-    'RIGHT',
-    'SELECT',
-    'SESSION_USER',
-    'SIMILAR',
-    'SOME',
-    'SYMMETRIC',
-    'TABLE',
-    'THEN',
-    'TO',
-    'TRAILING',
-    'TRUE',
-    'UNION',
-    'UNIQUE',
-    'USER',
-    'USING',
-    'VERBOSE',
-    'WHEN',
-    'WHERE'
-]]
-
 
 def column_type(schema_property):
     property_type = schema_property['type']
@@ -128,13 +32,11 @@ def inflect_column_name(name):
 
 
 def safe_column_name(name):
-    if name.lower() in postgres_keywords:
-        return '"{}"'.format(name)
-    return name
+    return '"{}"'.format(name)
 
 
 def column_clause(name, schema_property):
-    return '{} {}'.format(name, column_type(schema_property))
+    return '{} {}'.format(safe_column_name(name), column_type(schema_property))
 
 
 def flatten_key(k, parent_key, sep):
@@ -147,7 +49,7 @@ def flatten_key(k, parent_key, sep):
             (reduced_key if len(reduced_key) > 1 else inflected_key[reducer_index][0:3]).lower()
         reducer_index += 1
 
-    return safe_column_name(sep.join(inflected_key))
+    return sep.join(inflected_key)
 
 
 def flatten_schema(d, parent_key=[], sep='__'):
@@ -188,7 +90,7 @@ def flatten_record(d, parent_key=[], sep='__'):
 
 
 def primary_column_names(stream_schema_message):
-    return [inflect_column_name(p) for p in stream_schema_message['key_properties']]
+    return [safe_column_name(inflect_column_name(p)) for p in stream_schema_message['key_properties']]
 
 
 class DbSync:
@@ -312,7 +214,7 @@ class DbSync:
         return "DROP TABLE {}".format(temp_table)
 
     def column_names(self):
-        return [name for name in self.flatten_schema]
+        return [safe_column_name(name) for name in self.flatten_schema]
 
     def create_table_query(self, is_temporary=False):
         stream_schema_message = self.stream_schema_message
