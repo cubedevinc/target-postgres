@@ -135,6 +135,11 @@ class DbSync:
         else:
             return '{}.{}'.format(self.schema_name, table_name)
 
+    def record_primary_key_string(self, record):
+        flatten = flatten_record(record)
+        key_props = [str(flatten[inflect_column_name(p)]) for p in self.stream_schema_message['key_properties']]
+        return ','.join(key_props)
+
     def record_to_csv_line(self, record):
         flatten = flatten_record(record)
         return ','.join(

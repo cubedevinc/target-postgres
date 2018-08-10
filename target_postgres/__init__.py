@@ -37,6 +37,7 @@ def persist_lines(config, lines):
     csv_files_to_load = {}
     row_count = {}
     stream_to_sync = {}
+    primary_key_exists = {}
     batch_size = config['batch_size'] if 'batch_size' in config else 100000
 
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
@@ -61,21 +62,26 @@ def persist_lines(config, lines):
                     "A record for stream {} was encountered before a corresponding schema".format(o['stream']))
 
             # Get schema for this record's stream
-            schema = schemas[o['stream']]
+            stream = o['stream']
 
             # Validate record
-            validators[o['stream']].validate(o['record'])
+            validators[stream].validate(o['record'])
 
-            sync = stream_to_sync[o['stream']]
+            sync = stream_to_sync[stream]
+
+            primary_key_string = sync.record_primary_key_string(o['record'])
+            if stream not in primary_key_exists:
+                primary_key_exists[stream] = {}
+            if primary_key_string in primary_key_exists[stream]:
+                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
             csv_line = sync.record_to_csv_line(o['record'])
             csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
             row_count[o['stream']] += 1
+            primary_key_exists[stream][primary_key_string] = True
 
             if row_count[o['stream']] >= batch_size:
-                sync.load_csv(csv_files_to_load[o['stream']], row_count[o['stream']])
-                row_count[o['stream']] = 0
-                csv_files_to_load[o['stream']] = TemporaryFile(mode='w+b')
+                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
             state = None
         elif t == 'STATE':
@@ -106,6 +112,14 @@ def persist_lines(config, lines):
             stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count)
 
     return state
+
+
+def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync):
+    stream = o['stream']
+    sync.load_csv(csv_files_to_load[stream], row_count[stream])
+    row_count[stream] = 0
+    primary_key_exists[stream] = {}
+    csv_files_to_load[stream] = TemporaryFile(mode='w+b')
 
 
 def main():
