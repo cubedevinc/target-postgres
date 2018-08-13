@@ -136,6 +136,8 @@ class DbSync:
             return '{}.{}'.format(self.schema_name, table_name)
 
     def record_primary_key_string(self, record):
+        if len(self.stream_schema_message['key_properties']) == 0:
+            return None
         flatten = flatten_record(record)
         key_props = [str(flatten[inflect_column_name(p)]) for p in self.stream_schema_message['key_properties']]
         return ','.join(key_props)
@@ -167,8 +169,9 @@ class DbSync:
                     copy_sql,
                     file
                 )
-                cur.execute(self.update_from_temp_table())
-                logger.info(cur.statusmessage)
+                if len(self.stream_schema_message['key_properties']) > 0:
+                    cur.execute(self.update_from_temp_table())
+                    logger.info(cur.statusmessage)
                 cur.execute(self.insert_from_temp_table())
                 logger.info(cur.statusmessage)
                 cur.execute(self.drop_temp_table())
@@ -178,6 +181,16 @@ class DbSync:
         columns = self.column_names()
         table = self.table_name(stream_schema_message['stream'], False)
         temp_table = self.table_name(stream_schema_message['stream'], True)
+
+        if len(stream_schema_message['key_properties']) == 0:
+            return """INSERT INTO {} ({})
+                    (SELECT s.* FROM {} s)
+                    """.format(
+                table,
+                ', '.join(columns),
+                temp_table
+            )
+
         return """INSERT INTO {} ({})
         (SELECT s.* FROM {} s LEFT OUTER JOIN {} t ON {} WHERE {})
         """.format(
