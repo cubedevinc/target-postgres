@@ -14,17 +14,19 @@ def column_type(schema_property):
     property_type = schema_property['type']
     property_format = schema_property['format'] if 'format' in schema_property else None
     if 'object' in property_type or 'array' in property_type:
-        return 'JSONB'
+        return 'jsonb'
     elif property_format == 'date-time':
-        return 'timestamp'
+        return 'timestamp without time zone'
     elif 'number' in property_type:
-        return 'decimal'
+        return 'numeric'
+    elif 'integer' in property_type and 'string' in property_type:
+        return 'character varying'
     elif 'integer' in property_type:
         return 'bigint'
     elif 'boolean' in property_type:
-        return 'bool'
+        return 'boolean'
     else:
-        return 'varchar'
+        return 'character varying'
 
 
 def inflect_column_name(name):
@@ -290,9 +292,31 @@ class DbSync:
         ]
 
         for column in columns_to_add:
-            add_column = "ALTER TABLE {} ADD COLUMN {}".format(self.table_name(stream, False), column)
-            logger.info('Adding column: {}'.format(add_column))
-            self.query(add_column)
+            self.add_column(column, stream)
+
+        columns_to_replace = [
+            (safe_column_name(name), column_clause(
+                name,
+                properties_schema
+            ))
+            for (name, properties_schema) in self.flatten_schema.items()
+            if name.lower() in columns_dict and
+               columns_dict[name.lower()]['data_type'].lower() != column_type(properties_schema).lower()
+        ]
+
+        for (column_name, column) in columns_to_replace:
+            self.drop_column(column_name, stream)
+            self.add_column(column, stream)
+
+    def add_column(self, column, stream):
+        add_column = "ALTER TABLE {} ADD COLUMN {}".format(self.table_name(stream, False), column)
+        logger.info('Adding column: {}'.format(add_column))
+        self.query(add_column)
+
+    def drop_column(self, column_name, stream):
+        drop_column = "ALTER TABLE {} DROP COLUMN {}".format(self.table_name(stream, False), column_name)
+        logger.info('Dropping column: {}'.format(drop_column))
+        self.query(drop_column)
 
     def sync_table(self):
         stream_schema_message = self.stream_schema_message
