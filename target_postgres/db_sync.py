@@ -30,7 +30,7 @@ def column_type(schema_property):
 
 
 def inflect_column_name(name):
-    return inflection.underscore(name)
+    return inflection.underscore(re.sub(r"([A-Z]+)_([A-Z][a-z])", r'\1__\2', name))
 
 
 def safe_column_name(name):
