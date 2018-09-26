@@ -39,6 +39,13 @@ def safe_column_name(name):
     return '"{}"'.format(name)
 
 
+def sanitize(value):
+    if not isinstance(value, str):
+        return value
+
+    return value.replace('\u0000', '')
+
+
 def column_clause(name, schema_property):
     return '{} {}'.format(safe_column_name(name), column_type(schema_property))
 
@@ -58,20 +65,27 @@ def flatten_key(k, parent_key, sep):
 
 def flatten_schema(d, parent_key=[], sep='__'):
     items = []
+    print("{}\n".format(d['properties']))
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
+
+        if not v:
+            logger.warn("Empty definition for {}.".format(new_key))
+            continue
+
         if 'type' in v.keys():
             if 'object' in v['type']:
                 items.extend(flatten_schema(v, parent_key + [k], sep=sep).items())
             else:
                 items.append((new_key, v))
         else:
-            if list(v.values())[0][0]['type'] == 'string':
-                list(v.values())[0][0]['type'] = ['null', 'string']
-                items.append((new_key, list(v.values())[0][0]))
-            elif list(v.values())[0][0]['type'] == 'array':
-                list(v.values())[0][0]['type'] = ['null', 'array']
-                items.append((new_key, list(v.values())[0][0]))
+            property = list(v.values())[0][0]
+            if property['type'] == 'string':
+                property['type'] = ['null', 'string']
+                items.append((new_key, property))
+            elif property['type'] == 'array':
+                property['type'] = ['null', 'array']
+                items.append((new_key, property))
 
     key_func = lambda item: item[0]
     sorted_items = sorted(items, key=key_func)
@@ -89,7 +103,8 @@ def flatten_record(d, parent_key=[], sep='__'):
         if isinstance(v, collections.MutableMapping):
             items.extend(flatten_record(v, parent_key + [k], sep=sep).items())
         else:
-            items.append((new_key, json.dumps(v) if type(v) is list else v))
+            sanitized = sanitize(json.dumps(v) if type(v) is list else v)
+            items.append((new_key, sanitized))
     return dict(items)
 
 
