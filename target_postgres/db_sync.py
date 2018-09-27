@@ -39,15 +39,16 @@ def safe_column_name(name):
     return '"{}"'.format(name)
 
 
+def column_clause(name, schema_property):
+    return '{} {}'.format(safe_column_name(name), column_type(schema_property))
+
+
 def sanitize(value):
     if not isinstance(value, str):
         return value
 
-    return value.replace('\u0000', '')
-
-
-def column_clause(name, schema_property):
-    return '{} {}'.format(safe_column_name(name), column_type(schema_property))
+    # this sequence will cause the CSV load to fail
+    return value.replace("\\u0000", '')
 
 
 def flatten_key(k, parent_key, sep):
@@ -103,8 +104,7 @@ def flatten_record(d, parent_key=[], sep='__'):
         if isinstance(v, collections.MutableMapping):
             items.extend(flatten_record(v, parent_key + [k], sep=sep).items())
         else:
-            sanitized = sanitize(json.dumps(v) if type(v) is list else v)
-            items.append((new_key, sanitized))
+            items.append((new_key, json.dumps(v) if type(v) is list else v))
     return dict(items)
 
 
@@ -165,7 +165,7 @@ class DbSync:
         flatten = flatten_record(record)
         return ','.join(
             [
-                json.dumps(flatten[name]) if name in flatten and flatten[name] else ''
+                json.dumps(sanitize(flatten[name])) if name in flatten and flatten[name] else ''
                 for name in self.flatten_schema
             ]
         )
