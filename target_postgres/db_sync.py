@@ -66,7 +66,6 @@ def flatten_key(k, parent_key, sep):
 
 def flatten_schema(d, parent_key=[], sep='__'):
     items = []
-    print("{}\n".format(d['properties']))
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
 
