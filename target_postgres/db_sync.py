@@ -282,7 +282,9 @@ class DbSync:
         )
 
         if len(schema_rows) == 0:
-            self.query("CREATE SCHEMA IF NOT EXISTS {}".format(schema_name))
+            query = "CREATE SCHEMA IF NOT EXISTS {}".format(schema_name)
+            logger.info("Schema '{}' does not exist. Creating... {}".format(schema_name, query))
+            self.query(query)
 
             if 'grant_select_to' in self.connection_config:
                 grant_select_to = self.connection_config['grant_select_to']
