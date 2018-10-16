@@ -32,15 +32,12 @@ def persist_lines(config, lines):
     state = None
     schemas = {}
     key_properties = {}
-    headers = {}
     validators = {}
     records_to_load = {}
     csv_files_to_load = {}
     row_count = {}
     stream_to_sync = {}
     batch_size = config['batch_size'] if 'batch_size' in config else 100000
-
-    now = datetime.now().strftime('%Y%m%dT%H%M%S')
 
     # Loop over lines from stdin
     for line in lines:
