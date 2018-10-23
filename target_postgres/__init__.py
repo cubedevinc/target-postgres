@@ -13,7 +13,8 @@ import collections
 from tempfile import TemporaryFile
 
 import pkg_resources
-from jsonschema.validators import Draft4Validator, FormatChecker
+from jsonschema import validators, Draft4Validator, FormatChecker
+from decimal import Decimal
 import singer
 from target_postgres.db_sync import DbSync
 
