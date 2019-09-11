@@ -21,10 +21,10 @@ def column_type(schema_property):
         return 'numeric'
     elif 'integer' in property_type and 'string' in property_type:
         return 'character varying'
-    elif 'integer' in property_type:
-        return 'bigint'
     elif 'boolean' in property_type:
         return 'boolean'
+    elif 'integer' in property_type:
+        return 'bigint'
     else:
         return 'character varying'
 
@@ -61,7 +61,7 @@ def flatten_schema(d, parent_key=[], sep='__'):
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
         if 'type' in v.keys():
-            if 'object' in v['type']:
+            if 'object' in v['type'] and 'properties' in v:
                 items.extend(flatten_schema(v, parent_key + [k], sep=sep).items())
             else:
                 items.append((new_key, v))
