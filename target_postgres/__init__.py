@@ -5,6 +5,7 @@ import io
 import os
 import sys
 import json
+import re
 import threading
 import http.client
 import urllib
@@ -18,6 +19,15 @@ import singer
 from target_postgres.db_sync import DbSync
 
 logger = singer.get_logger()
+
+
+SANITIZE_RE = re.compile(
+    r'\\u0000'  # Get rid of JSON encoded null bytes (postgres won't accept null bytes in json)
+)
+
+
+def sanitize_line(line):
+    return SANITIZE_RE.sub('', line)
 
 
 def emit_state(state):
@@ -44,6 +54,7 @@ def persist_lines(config, lines):
 
     # Loop over lines from stdin
     for line in lines:
+        line = sanitize_line(line)
         try:
             o = json.loads(line)
         except json.decoder.JSONDecodeError:
