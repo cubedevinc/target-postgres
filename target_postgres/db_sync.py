@@ -66,6 +66,8 @@ def flatten_schema(d, parent_key=[], sep='__'):
             else:
                 items.append((new_key, v))
         else:
+            if not v:
+                continue
             if list(v.values())[0][0]['type'] == 'string':
                 list(v.values())[0][0]['type'] = ['null', 'string']
                 items.append((new_key, list(v.values())[0][0]))
