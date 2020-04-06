@@ -176,6 +176,8 @@ class DbSync:
                 if len(self.stream_schema_message['key_properties']) > 0:
                     cur.execute(self.update_from_temp_table())
                     logger.info(cur.statusmessage)
+                    cur.execute(self.delete_from_target_table())
+                    logger.info(cur.statusmessage)
                 cur.execute(self.insert_from_temp_table())
                 logger.info(cur.statusmessage)
                 cur.execute(self.drop_temp_table())
@@ -216,6 +218,25 @@ class DbSync:
         """.format(
             table,
             ', '.join(['{}=s.{}'.format(c, c) for c in columns]),
+            temp_table,
+            self.primary_key_condition(table)
+        )
+
+    # We do a hard delete in our source, so remove all the records 
+    # where the id is no longer in the temp table
+    def delete_from_target_table(self):
+        stream_schema_message = self.stream_schema_message
+        table = self.table_name(stream_schema_message['stream'], False)
+        temp_table = self.table_name(stream_schema_message['stream'], True)
+
+        if len(stream_schema_message['key_properties']) == 0:
+            return """SELECT 1""" # nothing to do
+
+        # DELETE FROM table WHERE id NOT IN (SELECT id FROM temp_table)
+        return """DELETE FROM {} WHERE NOT EXISTS  
+        (SELECT 1 FROM {} WHERE {})
+        """.format(
+            table,
             temp_table,
             self.primary_key_condition(table)
         )
