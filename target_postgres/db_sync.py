@@ -234,7 +234,7 @@ class DbSync:
 
         # DELETE FROM table WHERE id NOT IN (SELECT id FROM temp_table)
         return """DELETE FROM {} WHERE NOT EXISTS  
-        (SELECT 1 FROM {} WHERE {})
+        (SELECT 1 FROM {} s WHERE {})
         """.format(
             table,
             temp_table,
