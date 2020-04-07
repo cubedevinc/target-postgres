@@ -173,6 +173,9 @@ class DbSync:
                     copy_sql,
                     file
                 )
+            
+            # after all files are loaded complete the merge insert, update, delete
+            with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 if len(self.stream_schema_message['key_properties']) > 0:
                     cur.execute(self.update_from_temp_table())
                     logger.info(cur.statusmessage)
