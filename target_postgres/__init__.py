@@ -117,7 +117,7 @@ def persist_lines(config, lines):
                 temp_tables[stream_name] = True
             stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count, create_table)
 
-    for (stream_name) in row_count.items():
+    for (stream_name, count) in row_count.items():
         stream_to_sync[stream_name].merge_table()
 
     return state
