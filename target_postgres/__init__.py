@@ -81,8 +81,8 @@ def persist_lines(config, lines):
             if primary_key_string:
                 primary_key_exists[stream][primary_key_string] = True
 
-            if row_count[o['stream']] >= batch_size:
-                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
+            # if row_count[o['stream']] >= batch_size:
+            #     flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
             state = None
         elif t == 'STATE':
