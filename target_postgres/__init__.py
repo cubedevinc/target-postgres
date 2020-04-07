@@ -72,8 +72,8 @@ def persist_lines(config, lines):
             primary_key_string = sync.record_primary_key_string(o['record'])
             if stream not in primary_key_exists:
                 primary_key_exists[stream] = {}
-            if primary_key_string and primary_key_string in primary_key_exists[stream]:
-                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
+            # if primary_key_string and primary_key_string in primary_key_exists[stream]:
+            #     flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
             csv_line = sync.record_to_csv_line(o['record'])
             csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
