@@ -164,6 +164,8 @@ class DbSync:
         with self.open_connection() as connection:
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 if create_temp_table is True:
+                    # instruction is to create the temp table, so drop it if it exists
+                    cur.execute(self.drop_temp_table())
                     cur.execute(self.create_table_query(True))
                 copy_sql = "COPY {} ({}) FROM STDIN WITH (FORMAT CSV, ESCAPE '\\')".format(
                     self.table_name(stream, True),
@@ -257,7 +259,7 @@ class DbSync:
     def drop_temp_table(self):
         stream_schema_message = self.stream_schema_message
         temp_table = self.table_name(stream_schema_message['stream'], True)
-        return "DROP TABLE {}".format(temp_table)
+        return "DROP TABLE IF EXISTS {}".format(temp_table)
 
     def column_names(self):
         return [safe_column_name(name) for name in self.flatten_schema]
