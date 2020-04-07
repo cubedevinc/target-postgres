@@ -166,6 +166,7 @@ class DbSync:
                 if create_temp_table is True:
                     # instruction is to create the temp table, so drop it if it exists
                     cur.execute(self.drop_temp_table())
+                    logger.info(cur.statusmessage)
                     cur.execute(self.create_table_query(True))
                 copy_sql = "COPY {} ({}) FROM STDIN WITH (FORMAT CSV, ESCAPE '\\')".format(
                     self.table_name(stream, True),
@@ -180,14 +181,16 @@ class DbSync:
     def merge_table(self):
         stream_schema_message = self.stream_schema_message
         stream = stream_schema_message['stream']
-        if len(self.stream_schema_message['key_properties']) > 0:
-            cur.execute(self.update_from_temp_table())
-            logger.info(cur.statusmessage)
-            cur.execute(self.delete_from_target_table())
-            logger.info(cur.statusmessage)
-        cur.execute(self.insert_from_temp_table())
-        logger.info(cur.statusmessage)
-        cur.execute(self.drop_temp_table())
+        with self.open_connection() as connection:
+            with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
+                if len(self.stream_schema_message['key_properties']) > 0:
+                    cur.execute(self.update_from_temp_table())
+                    logger.info(cur.statusmessage)
+                    cur.execute(self.delete_from_target_table())
+                    logger.info(cur.statusmessage)
+                cur.execute(self.insert_from_temp_table())
+                logger.info(cur.statusmessage)
+                cur.execute(self.drop_temp_table())
 
     def insert_from_temp_table(self):
         stream_schema_message = self.stream_schema_message
