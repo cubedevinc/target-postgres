@@ -74,7 +74,7 @@ def persist_lines(config, lines):
             if stream not in primary_key_exists:
                 primary_key_exists[stream] = {}
             if primary_key_string and primary_key_string in primary_key_exists[stream]:
-                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
+                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync, temp_tables)
 
             csv_line = sync.record_to_csv_line(o['record'])
             csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
@@ -83,7 +83,7 @@ def persist_lines(config, lines):
                 primary_key_exists[stream][primary_key_string] = True
 
             if row_count[o['stream']] >= batch_size:
-                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
+                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync, temp_tables)
 
             state = None
         elif t == 'STATE':
@@ -115,11 +115,11 @@ def persist_lines(config, lines):
 
     for (stream_name) in row_count.items():
         stream_to_sync[stream_name].merge_table()
-        
+
     return state
 
 
-def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync):
+def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync, temp_tables):
     stream = o['stream']
     create_table = False
     if not temp_tables[stream]:
