@@ -111,7 +111,11 @@ def persist_lines(config, lines):
 
     for (stream_name, count) in row_count.items():
         if count > 0:
-            stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count)
+            create_table = False
+            if stream_name not in temp_tables:
+                create_table = True
+                temp_tables[stream_name] = True
+            stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count, create_table)
 
     for (stream_name) in row_count.items():
         stream_to_sync[stream_name].merge_table()
@@ -122,9 +126,9 @@ def persist_lines(config, lines):
 def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync, temp_tables):
     stream = o['stream']
     create_table = False
-    if stream not in temp_tables:
+    if row_count[0].stream_name not in temp_tables:
         create_table = True
-        temp_tables[stream] = True
+        temp_tables[row_count[0].stream_name] = True
     sync.load_csv(csv_files_to_load[stream], row_count[stream], create_temp_table=create_table)
     row_count[stream] = 0
     primary_key_exists[stream] = {}
