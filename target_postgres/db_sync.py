@@ -155,7 +155,7 @@ class DbSync:
             ]
         )
 
-    def load_csv(self, file, count):
+    def load_csv(self, file, count, create_temp_table):
         file.seek(0)
         stream_schema_message = self.stream_schema_message
         stream = stream_schema_message['stream']
@@ -163,7 +163,8 @@ class DbSync:
 
         with self.open_connection() as connection:
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
-                cur.execute(self.create_table_query(True))
+                if create_temp_table is True:
+                    cur.execute(self.create_table_query(True))
                 copy_sql = "COPY {} ({}) FROM STDIN WITH (FORMAT CSV, ESCAPE '\\')".format(
                     self.table_name(stream, True),
                     ', '.join(self.column_names())
@@ -173,14 +174,16 @@ class DbSync:
                     copy_sql,
                     file
                 )
-                if len(self.stream_schema_message['key_properties']) > 0:
-                    cur.execute(self.update_from_temp_table())
-                    logger.info(cur.statusmessage)
-                    cur.execute(self.delete_from_target_table())
-                    logger.info(cur.statusmessage)
-                cur.execute(self.insert_from_temp_table())
-                logger.info(cur.statusmessage)
-                cur.execute(self.drop_temp_table())
+
+    def merge_table(self):
+        if len(self.stream_schema_message['key_properties']) > 0:
+            cur.execute(self.update_from_temp_table())
+            logger.info(cur.statusmessage)
+            cur.execute(self.delete_from_target_table())
+            logger.info(cur.statusmessage)
+        cur.execute(self.insert_from_temp_table())
+        logger.info(cur.statusmessage)
+        cur.execute(self.drop_temp_table())
 
     def insert_from_temp_table(self):
         stream_schema_message = self.stream_schema_message

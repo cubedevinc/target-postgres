@@ -38,6 +38,7 @@ def persist_lines(config, lines):
     row_count = {}
     stream_to_sync = {}
     primary_key_exists = {}
+    temp_tables = {}
     batch_size = config['batch_size'] if 'batch_size' in config else 100000
 
     now = datetime.now().strftime('%Y%m%dT%H%M%S')
@@ -72,8 +73,8 @@ def persist_lines(config, lines):
             primary_key_string = sync.record_primary_key_string(o['record'])
             if stream not in primary_key_exists:
                 primary_key_exists[stream] = {}
-            # if primary_key_string and primary_key_string in primary_key_exists[stream]:
-            #     flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
+            if primary_key_string and primary_key_string in primary_key_exists[stream]:
+                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
             csv_line = sync.record_to_csv_line(o['record'])
             csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
@@ -81,8 +82,8 @@ def persist_lines(config, lines):
             if primary_key_string:
                 primary_key_exists[stream][primary_key_string] = True
 
-            # if row_count[o['stream']] >= batch_size:
-            #     flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
+            if row_count[o['stream']] >= batch_size:
+                flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
             state = None
         elif t == 'STATE':
@@ -112,12 +113,19 @@ def persist_lines(config, lines):
         if count > 0:
             stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count)
 
+    for (stream_name) in row_count.items():
+        stream_to_sync[stream_name].merge_table()
+        
     return state
 
 
 def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync):
     stream = o['stream']
-    sync.load_csv(csv_files_to_load[stream], row_count[stream])
+    create_table = False
+    if not temp_tables[stream]:
+        create_table = True
+        temp_tables[stream] = True
+    sync.load_csv(csv_files_to_load[stream], row_count[stream], create_temp_table=create_table)
     row_count[stream] = 0
     primary_key_exists[stream] = {}
     csv_files_to_load[stream] = TemporaryFile(mode='w+b')
