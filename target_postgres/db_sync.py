@@ -275,8 +275,8 @@ class DbSync:
         primary_key = ["PRIMARY KEY ({})".format(', '.join(primary_column_names(stream_schema_message)))] \
             if len(stream_schema_message['key_properties']) else []
 
-        return 'CREATE {}TABLE {} ({})'.format(
-            'TEMP ' if is_temporary else '',
+        return 'CREATE TABLE {} ({})'.format(
+            # 'TEMP ' if is_temporary else '',
             self.table_name(stream_schema_message['stream'], is_temporary),
             ', '.join(columns + primary_key)
         )
