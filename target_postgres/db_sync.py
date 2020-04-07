@@ -178,6 +178,8 @@ class DbSync:
                 )
 
     def merge_table(self):
+        stream_schema_message = self.stream_schema_message
+        stream = stream_schema_message['stream']
         if len(self.stream_schema_message['key_properties']) > 0:
             cur.execute(self.update_from_temp_table())
             logger.info(cur.statusmessage)
