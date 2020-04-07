@@ -122,7 +122,7 @@ def persist_lines(config, lines):
 def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync, temp_tables):
     stream = o['stream']
     create_table = False
-    if not temp_tables[stream]:
+    if stream not in temp_tables:
         create_table = True
         temp_tables[stream] = True
     sync.load_csv(csv_files_to_load[stream], row_count[stream], create_temp_table=create_table)
