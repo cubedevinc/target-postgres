@@ -103,16 +103,22 @@ def persist_lines(config, lines):
             if 'stream' not in o:
                 raise Exception("Line is missing required key 'stream': {}".format(line))
             stream = o['stream']
-            schemas[stream] = o
-            validators[stream] = Draft4Validator(o['schema'])
-            if 'key_properties' not in o:
-                raise Exception("key_properties field is required")
-            key_properties[stream] = o['key_properties']
-            stream_to_sync[stream] = DbSync(config, o)
-            stream_to_sync[stream].create_schema_if_not_exists()
-            stream_to_sync[stream].sync_table()
-            row_count[stream] = 0
-            csv_files_to_load[stream] = TemporaryFile(mode='w+b')
+            if stream not in schemas:
+                # If we get more than one schema message for the same stream,
+                # only use the first. Otherwise, this will clobber any
+                # records we've collected for this schema so far.
+                schemas[stream] = o
+                validators[stream] = Draft4Validator(o['schema'])
+                if 'key_properties' not in o:
+                    raise Exception("key_properties field is required")
+                key_properties[stream] = o['key_properties']
+                stream_to_sync[stream] = DbSync(config, o)
+                stream_to_sync[stream].create_schema_if_not_exists()
+                stream_to_sync[stream].sync_table()
+                row_count[stream] = 0
+                csv_files_to_load[stream] = TemporaryFile(mode='w+b')
+            else:
+                logger.warning('more than one schema message found for stream %r; only the first will be used', stream)
         elif t == 'ACTIVATE_VERSION':
             logger.debug('ACTIVATE_VERSION message')
         else:
