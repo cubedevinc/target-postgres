@@ -154,10 +154,14 @@ class DbSync:
         for name, schema in self.flatten_schema.items():
             if flatten.get(name):
                 type = column_type(schema).lower()
+                value = flatten[name]
                 if type == 'jsonb':
-                    value = json.dumps(flatten[name])
-                else:
-                    value = flatten[name]
+                    try:
+                        # Check to see if the value is a serialized JSON value.
+                        json.loads(value)
+                    except (TypeError, json.JSONDecodeError):
+                        # value is not a valid JSON string, so make it one.
+                        value = json.dumps(value)
             else:
                 value = ''
             row.append(value)
