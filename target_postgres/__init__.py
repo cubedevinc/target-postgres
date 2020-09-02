@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import csv
 import io
 import os
 import sys
@@ -36,6 +37,12 @@ def emit_state(state):
         logger.debug('Emitting state {}'.format(line))
         sys.stdout.write("{}\n".format(line))
         sys.stdout.flush()
+
+
+def new_csv_file_entry():
+    csv_f = io.TextIOWrapper(TemporaryFile(mode='w+b'), newline='\n', encoding='UTF-8')
+    writer = csv.writer(csv_f)
+    return {'file': csv_f, 'writer': writer}
 
 
 def persist_lines(config, lines):
@@ -86,8 +93,8 @@ def persist_lines(config, lines):
             if primary_key_string and primary_key_string in primary_key_exists[stream]:
                 flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync)
 
-            csv_line = sync.record_to_csv_line(o['record'])
-            csv_files_to_load[o['stream']].write(bytes(csv_line + '\n', 'UTF-8'))
+            writer = csv_files_to_load[o['stream']]['writer']
+            writer.writerow(sync.record_to_csv_row(o['record']))
             row_count[o['stream']] += 1
             if primary_key_string:
                 primary_key_exists[stream][primary_key_string] = True
@@ -116,7 +123,7 @@ def persist_lines(config, lines):
                 stream_to_sync[stream].create_schema_if_not_exists()
                 stream_to_sync[stream].sync_table()
                 row_count[stream] = 0
-                csv_files_to_load[stream] = TemporaryFile(mode='w+b')
+                csv_files_to_load[stream] = new_csv_file_entry()
             else:
                 logger.warning('more than one schema message found for stream %r; only the first will be used', stream)
         elif t == 'ACTIVATE_VERSION':
@@ -127,17 +134,20 @@ def persist_lines(config, lines):
 
     for (stream_name, count) in row_count.items():
         if count > 0:
-            stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name], count)
+            stream_to_sync[stream_name].load_csv(csv_files_to_load[stream_name]['file'], count)
 
     return state
 
 
 def flush_records(o, csv_files_to_load, row_count, primary_key_exists, sync):
     stream = o['stream']
-    sync.load_csv(csv_files_to_load[stream], row_count[stream])
+    csv_files_to_load[stream]['file'].flush()
+    # Convert the file to the underlying binary file.
+    csv_file = csv_files_to_load[stream]['file'].detach()
+    sync.load_csv(csv_file, row_count[stream])
     row_count[stream] = 0
     primary_key_exists[stream] = {}
-    csv_files_to_load[stream] = TemporaryFile(mode='w+b')
+    csv_files_to_load[stream] = new_csv_file_entry()
 
 
 def main():

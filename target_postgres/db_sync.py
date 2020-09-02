@@ -148,14 +148,20 @@ class DbSync:
         key_props = [str(flatten[inflect_column_name(p)]) for p in self.stream_schema_message['key_properties']]
         return ','.join(key_props)
 
-    def record_to_csv_line(self, record):
+    def record_to_csv_row(self, record):
+        row = []
         flatten = flatten_record(record)
-        return ','.join(
-            [
-                json.dumps(flatten[name]) if name in flatten and flatten[name] else ''
-                for name in self.flatten_schema
-            ]
-        )
+        for name, schema in self.flatten_schema.items():
+            if flatten.get(name):
+                type = column_type(schema).lower()
+                if type == 'jsonb':
+                    value = json.dumps(flatten[name])
+                else:
+                    value = flatten[name]
+            else:
+                value = ''
+            row.append(value)
+        return row
 
     def load_csv(self, file, count):
         file.seek(0)
@@ -166,7 +172,7 @@ class DbSync:
         with self.open_connection() as connection:
             with connection.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
                 cur.execute(self.create_table_query(True))
-                copy_sql = "COPY {} ({}) FROM STDIN WITH (FORMAT CSV, ESCAPE '\\')".format(
+                copy_sql = "COPY {} ({}) FROM STDIN WITH (FORMAT CSV)".format(
                     self.table_name(stream, True),
                     ', '.join(self.column_names())
                 )
