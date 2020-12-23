@@ -338,6 +338,7 @@ class DbSync:
     def sync_table(self):
         stream_schema_message = self.stream_schema_message
         stream = stream_schema_message['stream']
+        stream = inflect_name(stream)
         found_tables = [table for table in (self.get_tables()) if table['table_name'].lower() == stream.lower()]
         if len(found_tables) == 0:
             query = self.create_table_query()
