@@ -30,6 +30,7 @@ def column_type(schema_property):
 
 
 def inflect_name(name):
+    name = re.sub(r'[^a-zA-Z0-9 ]', '', name)
     name = name.replace(' ', '_')
     name = re.sub(r"([A-Z]+)_([A-Z][a-z])", r'\1__\2', name)
     name = re.sub(r"([a-z\d])_([A-Z])", r'\1__\2', name)
