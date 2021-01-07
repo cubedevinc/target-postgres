@@ -30,8 +30,11 @@ def column_type(schema_property):
 
 
 def inflect_name(name):
-    name = re.sub(r'[^a-zA-Z0-9 ]', '', name)
-    name = name.replace(' ', '_')
+
+    # By modifying the name here , we introduce the possibility of having
+    # duplicate column or table names. This will be much more likely to happen
+    # with arbitrary user input
+    name = re.sub(r'[^a-zA-Z0-9]', '_', name)
     name = re.sub(r"([A-Z]+)_([A-Z][a-z])", r'\1__\2', name)
     name = re.sub(r"([a-z\d])_([A-Z])", r'\1__\2', name)
     return inflection.underscore(name)
