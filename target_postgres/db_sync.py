@@ -65,6 +65,12 @@ def flatten_schema(d, parent_key=[], sep='__'):
     items = []
     for k, v in d['properties'].items():
         new_key = flatten_key(k, parent_key, sep)
+
+        if 'anyOf' in v:
+            # Added because tap-s3-csv uses `anyOf`. This will work for that
+            # tap, but it may not work for all usages of `anyOf`.
+            v = v['anyOf'][0]
+
         if 'type' in v.keys():
             if 'object' in v['type'] and 'properties' in v:
                 items.extend(flatten_schema(v, parent_key + [k], sep=sep).items())
@@ -79,6 +85,8 @@ def flatten_schema(d, parent_key=[], sep='__'):
             elif list(v.values())[0][0]['type'] == 'array':
                 list(v.values())[0][0]['type'] = ['null', 'array']
                 items.append((new_key, list(v.values())[0][0]))
+            else:
+                logger.warning('unhandled schema key: %s: %s', k, v)
 
     key_func = lambda item: item[0]
     sorted_items = sorted(items, key=key_func)
