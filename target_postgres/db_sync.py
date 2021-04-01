@@ -37,6 +37,8 @@ def inflect_name(name):
     name = re.sub(r'[^a-zA-Z0-9]', '_', name)
     name = re.sub(r"([A-Z]+)_([A-Z][a-z])", r'\1__\2', name)
     name = re.sub(r"([a-z\d])_([A-Z])", r'\1__\2', name)
+    if name[0].isdigit():
+        name = '_' + name
     return inflection.underscore(name)
 
 
