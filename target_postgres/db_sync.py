@@ -16,7 +16,7 @@ def column_type(schema_property):
     if 'object' in property_type or 'array' in property_type:
         return 'jsonb'
     elif property_format == 'date-time':
-        return 'timestamp without time zone'
+        return 'timestamp with time zone'
     elif 'number' in property_type:
         return 'numeric'
     elif 'integer' in property_type and 'string' in property_type:
@@ -332,7 +332,11 @@ class DbSync:
             ))
             for (name, properties_schema) in self.flatten_schema.items()
             if name.lower() in columns_dict and
-               columns_dict[name.lower()]['data_type'].lower() != column_type(properties_schema).lower()
+               (columns_dict[name.lower()]['data_type'].lower() != column_type(properties_schema).lower()) and
+               # Do not drop the column if it used to not have a timezone, and we are adding one.
+               # This is done so we can migrate all timestamps to have a timezone.
+               not (columns_dict[name.lower()]['data_type'].lower() == 'timestamp without time zone' and
+                    column_type(properties_schema).lower() == 'timestamp with time zone')
         ]
 
         for (column_name, column) in columns_to_replace:
