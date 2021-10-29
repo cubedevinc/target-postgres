@@ -169,7 +169,7 @@ class DbSync:
         row = []
         flatten = flatten_record(record)
         for name, schema in self.flatten_schema.items():
-            if flatten.get(name):
+            if flatten.get(name) is not None:
                 type = column_type(schema).lower()
                 value = flatten[name]
                 if type == 'jsonb':
