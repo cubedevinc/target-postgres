@@ -14,6 +14,14 @@ setup(
         "psycopg2==2.7.5",
         "inflection==0.3.1"
     ],
+    extras_require={
+        'dev': [
+            'pylint',
+            'flake8',
+            'pytest==7.0.1',
+            'pytest-cov',
+        ]
+    },
     entry_points="""
     [console_scripts]
     target-postgres=target_postgres:main
