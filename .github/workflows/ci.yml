@@ -1,0 +1,23 @@
+name: CI
+on: [push]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - run: python -mvenv "${{ github.workspace }}/venv"
+      - run: . "${{ github.workspace }}/venv/bin/activate" && make -C "${{ github.workspace }}" lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - run: python -mvenv "${{ github.workspace }}/venv"
+      - run: . "${{ github.workspace }}/venv/bin/activate" && make -C "${{ github.workspace }}" test
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v2
+        with:
+          name: code-coverage-report
+          path: "${{ github.workspace }}/htmlcov/"
+          retention-days: 7
