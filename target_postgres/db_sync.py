@@ -17,6 +17,8 @@ def column_type(schema_property):
         return 'jsonb'
     elif property_format == 'date-time':
         return 'timestamp with time zone'
+    elif property_format == 'date':
+        return 'date'
     elif 'number' in property_type:
         return 'numeric'
     elif 'integer' in property_type and 'string' in property_type:
