@@ -11,7 +11,7 @@ setup(
     py_modules=["target_postgres"],
     install_requires=[
         "singer-python==5.1.1",
-        "psycopg2==2.9.3",
+        "psycopg2==2.9.3", # Pinned to match fuji
         "inflection==0.3.1"
     ],
     extras_require={
