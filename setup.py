@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name="target-postgres",
-    version="1.1.20",
+    version="1.1.21",
     description="Singer.io target for Postgres",
     author="Statsbot",
     url="https://statsbot.co",
@@ -11,14 +11,22 @@ setup(
     py_modules=["target_postgres"],
     install_requires=[
         "singer-python==5.1.1",
-        "psycopg2==2.7.5",
+        "psycopg2==2.9.3", # Pinned to match fuji
         "inflection==0.3.1"
     ],
+    extras_require={
+        'dev': [
+            'pylint',
+            'flake8',
+            'pytest==7.0.1',
+            'pytest-cov',
+        ]
+    },
     entry_points="""
     [console_scripts]
     target-postgres=target_postgres:main
     """,
     packages=["target_postgres"],
-    package_data = {},
+    package_data={},
     include_package_data=True,
 )
