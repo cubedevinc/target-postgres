@@ -215,5 +215,16 @@ def test_dbsync_table_name(table_name: str, is_temporary: bool, expected: str, d
 def test_record_to_csv_row(record: dict, expected: list, dbsync_class: DbSync):
     assert sorted(dbsync_class.record_to_csv_row(record)) == sorted(expected)
 
-
-def test_record_primary_key_string(record:)
+@pytest.mark.parametrize(
+    'record,key_props,expected',
+    [   
+        ({'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}, [], None),
+        ({}, ['id'], None),
+        ({'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}, ['id'], '1'),
+        ({'test__primary': 1}, ['Test Primary'], '1'),
+        ({'test__primary': 1, 'test_secondary': 2}, ['Test Primary', 'Test_secondary'], '1,2'),
+    ]
+)
+def test_record_primary_key_string(record, key_props: list, expected: str, dbsync_class: DbSync):
+    dbsync_class.stream_schema_message['key_properties'] = key_props
+    assert dbsync_class.record_primary_key_string(record) == expected
