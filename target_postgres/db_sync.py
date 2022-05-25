@@ -102,6 +102,8 @@ def flatten_schema(d, parent_key=[], sep='__'):
 
 
 def flatten_record(d, parent_key=[], sep='__'):
+    if not d or not isinstance(d, dict):
+        return {}
     items = []
     for k, v in d.items():
         new_key = flatten_key(k, parent_key, sep)
@@ -162,6 +164,8 @@ class DbSync:
 
     def record_primary_key_string(self, record):
         if len(self.stream_schema_message['key_properties']) == 0:
+            return None
+        if not record:
             return None
         flatten = flatten_record(record)
         key_props = [str(flatten[inflect_name(p)]) for p in self.stream_schema_message['key_properties']]
