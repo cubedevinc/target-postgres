@@ -85,6 +85,11 @@ def persist_lines(config, lines):
             # Validate record
             validators[stream].validate(o['record'])
 
+            # Ensure the record is not None
+            if not o['record']:
+                logger.warning(f'A record for stream {o["stream"]} is invalid which can violate constraints. Skipping line: {o}')
+                continue
+
             sync = stream_to_sync[stream]
 
             primary_key_string = sync.record_primary_key_string(o['record'])

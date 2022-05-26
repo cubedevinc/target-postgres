@@ -144,10 +144,50 @@ def test_flatten_schema(additional_prop_kwargs: dict, expected: dict):
     sorted_expected = sorted(expected.items(), key=_sort)
     assert sorted_flattened == sorted_expected
 
-def test_flatten_record():
-    record = {'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}
-    expected = {'id': '1', 'custom_fields__app__value': 'nested'}
-    assert flatten_record(record) == expected
+@pytest.mark.parametrize(
+    'record,expected',
+    [
+        (
+            # Test a nested field and perserves other key values
+            {'id': '1', 'custom_fields': {'app': {'value': 'nested'}}},
+            {'id': '1', 'custom_fields__app__value': 'nested'}
+        ),
+        (
+            # Test a nested field with multiple key values
+            {'custom_fields': {'app': {'value': 'nested', 'value2': 'nested2'}}},
+            {'custom_fields__app__value': 'nested', 'custom_fields__app__value2': 'nested2'}
+        ),
+        (
+            # Test a nested field with array value of same types, calls json.dumps
+            {'custom_fields': {'app': {'value': ['1', '2']}}},
+            {'custom_fields__app__value': '["1", "2"]'}
+        ),
+        (
+            # Test a nested field with array value of varying types, calls json.dumps
+            {'custom_fields': {'app': {'value': [1, '2', {'a': 3}]}}},
+            {'custom_fields__app__value': '[1, "2", {"a": 3}]'}
+        ),
+        (
+            # Test a nested field with tuple value of same types
+            {'custom_fields': {'app': {'value': (1, 2)}}},
+            {'custom_fields__app__value': (1, 2)}
+        ),
+        (
+            # Test a nested field with tuple value of varying types
+            {'custom_fields': {'app': {'value': (1, '2', {'a': 3})}}},
+            {'custom_fields__app__value': (1, '2', {'a': 3})}
+        ),
+        ({'id': 1}, {'id': 1}),
+        (None, {}),
+        ([], {}),
+        ({}, {}),
+        ('some_value', {}),
+    ]
+)
+def test_flatten_record(record, expected: dict):
+    actual = flatten_record(record)
+    assert actual == expected
+    assert isinstance(actual, dict)
 
 @pytest.mark.parametrize(
     'table_name,is_temporary,expected',
@@ -174,3 +214,17 @@ def test_dbsync_table_name(table_name: str, is_temporary: bool, expected: str, d
 )
 def test_record_to_csv_row(record: dict, expected: list, dbsync_class: DbSync):
     assert sorted(dbsync_class.record_to_csv_row(record)) == sorted(expected)
+
+@pytest.mark.parametrize(
+    'record,key_props,expected',
+    [   
+        ({'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}, [], None),
+        ({}, ['id'], None),
+        ({'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}, ['id'], '1'),
+        ({'test__primary': 1}, ['Test Primary'], '1'),
+        ({'test__primary': 1, 'test_secondary': 2}, ['Test Primary', 'Test_secondary'], '1,2'),
+    ]
+)
+def test_record_primary_key_string(record, key_props: list, expected: str, dbsync_class: DbSync):
+    dbsync_class.stream_schema_message['key_properties'] = key_props
+    assert dbsync_class.record_primary_key_string(record) == expected
