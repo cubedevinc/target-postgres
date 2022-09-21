@@ -148,34 +148,38 @@ def test_flatten_schema(additional_prop_kwargs: dict, expected: dict):
     'record,expected',
     [
         (
+            {'id': '1', 'custom_fields': {'app': 'value'}},
+            {'id': '1', 'custom_fields__app': 'value'}
+        ),
+        (
             # Test a nested field and perserves other key values
             {'id': '1', 'custom_fields': {'app': {'value': 'nested'}}},
-            {'id': '1', 'custom_fields__app__value': 'nested'}
+            {'id': '1', 'custom_fields__app': '{"value": "nested"}', 'custom_fields__app__value': 'nested'}
         ),
         (
             # Test a nested field with multiple key values
             {'custom_fields': {'app': {'value': 'nested', 'value2': 'nested2'}}},
-            {'custom_fields__app__value': 'nested', 'custom_fields__app__value2': 'nested2'}
+            {'custom_fields__app': '{"value": "nested", "value2": "nested2"}', 'custom_fields__app__value': 'nested', 'custom_fields__app__value2': 'nested2'}
         ),
         (
             # Test a nested field with array value of same types, calls json.dumps
             {'custom_fields': {'app': {'value': ['1', '2']}}},
-            {'custom_fields__app__value': '["1", "2"]'}
+            {'custom_fields__app': '{"value": ["1", "2"]}', 'custom_fields__app__value': '["1", "2"]'}
         ),
         (
             # Test a nested field with array value of varying types, calls json.dumps
             {'custom_fields': {'app': {'value': [1, '2', {'a': 3}]}}},
-            {'custom_fields__app__value': '[1, "2", {"a": 3}]'}
+            {'custom_fields__app': '{"value": [1, "2", {"a": 3}]}', 'custom_fields__app__value': '[1, "2", {"a": 3}]'}
         ),
         (
             # Test a nested field with tuple value of same types
             {'custom_fields': {'app': {'value': (1, 2)}}},
-            {'custom_fields__app__value': (1, 2)}
+            {'custom_fields__app': '{"value": [1, 2]}', 'custom_fields__app__value': (1, 2)}
         ),
         (
             # Test a nested field with tuple value of varying types
             {'custom_fields': {'app': {'value': (1, '2', {'a': 3})}}},
-            {'custom_fields__app__value': (1, '2', {'a': 3})}
+            {'custom_fields__app': '{"value": [1, "2", {"a": 3}]}', 'custom_fields__app__value': (1, '2', {'a': 3})}
         ),
         ({'id': 1}, {'id': 1}),
         (None, {}),
@@ -188,6 +192,7 @@ def test_flatten_record(record, expected: dict):
     actual = flatten_record(record)
     assert actual == expected
     assert isinstance(actual, dict)
+
 
 @pytest.mark.parametrize(
     'table_name,is_temporary,expected',
