@@ -193,7 +193,6 @@ def test_flatten_record(record, expected: dict):
     assert actual == expected
     assert isinstance(actual, dict)
 
-
 @pytest.mark.parametrize(
     'table_name,is_temporary,expected',
     [
