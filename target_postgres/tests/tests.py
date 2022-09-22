@@ -8,6 +8,13 @@ BASE_SCHEMA = {
     'schema': {
         'properties': {
             'id': {'type': ['null', 'string', 'integer']},
+            # To test not flattening a dictionary
+            'dict_fields': {
+                'type': [
+                    'null',
+                    'object'
+                ]
+            },
             # To test flattening a deeply nested property
             'custom_fields': {
                 'properties': {
@@ -76,6 +83,7 @@ def test_column_type(prop: dict, expected: str):
             },
             {
                 'id': {'type': ['null', 'string', 'integer']},
+                'dict_fields': {'type': ['null', 'object']},
                 'custom_fields__app__value': {'type': ['null', 'string']},
                 'other': {'type': ['null', 'string']},
                 'f': {'type': ['null', 'string'], 'format': 'date-time'}
@@ -88,6 +96,7 @@ def test_column_type(prop: dict, expected: str):
             },
             {
                 'id': {'type': ['null', 'string', 'integer']},
+                'dict_fields': {'type': ['null', 'object']},
                 'custom_fields__app__value': {'type': ['null', 'string']},
                 'other': {'type': ['null', 'string']},
                 'f': {'type': ['array'], 'items': ['string']}
@@ -100,6 +109,7 @@ def test_column_type(prop: dict, expected: str):
             },
             {
                 'id': {'type': ['null', 'string', 'integer']},
+                'dict_fields': {'type': ['null', 'object']},
                 'custom_fields__app__value': {'type': ['null', 'string']},
                 'other': {'type': ['null', 'string']},
             }
@@ -111,6 +121,7 @@ def test_column_type(prop: dict, expected: str):
             },
             {
                 'id': {'type': ['null', 'string', 'integer']},
+                'dict_fields': {'type': ['null', 'object']},
                 'custom_fields__app__value': {'type': ['null', 'string']},
                 'other': {'type': ['null', 'string', 'integer']},
             }
@@ -129,6 +140,7 @@ def test_column_type(prop: dict, expected: str):
             },
             {
                 'id': {'type': ['null', 'string', 'integer']},
+                'dict_fields': {'type': ['null', 'object']},
                 'custom_fields__app__value': {'type': ['null', 'string']},
                 'other': {'type': ['null', 'string']},
                 'deep_other__value': {'type': ['null', 'integer']},
@@ -149,37 +161,37 @@ def test_flatten_schema(additional_prop_kwargs: dict, expected: dict):
     [
         (
             {'id': '1', 'custom_fields': {'app': 'value'}},
-            {'id': '1', 'custom_fields__app': 'value'}
+            {'id': '1', 'custom_fields': '{"app": "value"}', 'custom_fields__app': 'value'}
         ),
         (
             # Test a nested field and perserves other key values
             {'id': '1', 'custom_fields': {'app': {'value': 'nested'}}},
-            {'id': '1', 'custom_fields__app': '{"value": "nested"}', 'custom_fields__app__value': 'nested'}
+            {'id': '1', 'custom_fields': '{"app": {"value": "nested"}}', 'custom_fields__app': '{"value": "nested"}', 'custom_fields__app__value': 'nested'}
         ),
         (
             # Test a nested field with multiple key values
             {'custom_fields': {'app': {'value': 'nested', 'value2': 'nested2'}}},
-            {'custom_fields__app': '{"value": "nested", "value2": "nested2"}', 'custom_fields__app__value': 'nested', 'custom_fields__app__value2': 'nested2'}
+            {'custom_fields': '{"app": {"value": "nested", "value2": "nested2"}}', 'custom_fields__app': '{"value": "nested", "value2": "nested2"}', 'custom_fields__app__value': 'nested', 'custom_fields__app__value2': 'nested2'}
         ),
         (
             # Test a nested field with array value of same types, calls json.dumps
             {'custom_fields': {'app': {'value': ['1', '2']}}},
-            {'custom_fields__app': '{"value": ["1", "2"]}', 'custom_fields__app__value': '["1", "2"]'}
+            {'custom_fields': '{"app": {"value": ["1", "2"]}}', 'custom_fields__app': '{"value": ["1", "2"]}', 'custom_fields__app__value': '["1", "2"]'}
         ),
         (
             # Test a nested field with array value of varying types, calls json.dumps
             {'custom_fields': {'app': {'value': [1, '2', {'a': 3}]}}},
-            {'custom_fields__app': '{"value": [1, "2", {"a": 3}]}', 'custom_fields__app__value': '[1, "2", {"a": 3}]'}
+            {'custom_fields': '{"app": {"value": [1, "2", {"a": 3}]}}', 'custom_fields__app': '{"value": [1, "2", {"a": 3}]}', 'custom_fields__app__value': '[1, "2", {"a": 3}]'}
         ),
         (
             # Test a nested field with tuple value of same types
             {'custom_fields': {'app': {'value': (1, 2)}}},
-            {'custom_fields__app': '{"value": [1, 2]}', 'custom_fields__app__value': (1, 2)}
+            {'custom_fields': '{"app": {"value": [1, 2]}}', 'custom_fields__app': '{"value": [1, 2]}', 'custom_fields__app__value': (1, 2)}
         ),
         (
             # Test a nested field with tuple value of varying types
             {'custom_fields': {'app': {'value': (1, '2', {'a': 3})}}},
-            {'custom_fields__app': '{"value": [1, "2", {"a": 3}]}', 'custom_fields__app__value': (1, '2', {'a': 3})}
+            {'custom_fields': '{"app": {"value": [1, "2", {"a": 3}]}}', 'custom_fields__app': '{"value": [1, "2", {"a": 3}]}', 'custom_fields__app__value': (1, '2', {'a': 3})}
         ),
         ({'id': 1}, {'id': 1}),
         (None, {}),
@@ -210,10 +222,11 @@ def test_dbsync_table_name(table_name: str, is_temporary: bool, expected: str, d
 @pytest.mark.parametrize(
     'record,expected',
     [
-        ({'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}, ['1', 'nested', '']),
-        ({'custom_fields': {'app': {'value': 'nested'}}}, ['', 'nested', '']),
-        ({'other': 'some_other'}, ['', '', 'some_other']),
-        ({'dne': 'dne'}, ['', '', ''])
+        ({'id': '1', 'custom_fields': {'app': {'value': 'nested'}}}, ['1', 'nested', '', '']),
+        ({'id': '1', 'dict_fields': {'app': {'value': 'nested'}}}, ['1', '', '', '{"app": {"value": "nested"}}']),
+        ({'custom_fields': {'app': {'value': 'nested'}}}, ['', 'nested', '', '']),
+        ({'other': 'some_other'}, ['', '', 'some_other', '']),
+        ({'dne': 'dne'}, ['', '', '', ''])
     ]
 )
 def test_record_to_csv_row(record: dict, expected: list, dbsync_class: DbSync):

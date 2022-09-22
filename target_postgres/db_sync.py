@@ -108,17 +108,17 @@ def flatten_record(d, parent_key=[], sep='__'):
 
     for k, v in d.items():
         new_key = flatten_key(k, parent_key, sep)
-        if isinstance(v, collections.abc.MutableMapping):
+        mutable_class = collections.abc.MutableMapping if hasattr(collections, 'abc') else collections.MutableMapping
+        if isinstance(v, mutable_class):
             items.extend(flatten_record(v, parent_key + [k], sep=sep).items())
-            if len(parent_key) > 0:
-                #  Note: without the following line, all the keys will be flattened
-                #  including nested dictionaries.
-                #  For example:
-                #      {'answers': {'q1': 'some_string', 'some_dict': {'q2': 'some_string2'}}}
-                #  will be transformed to
-                #      [('answers__q1', 'some_string'), ('answers__some_dict__q2', 'some_string2')]
-                #  so we need to add an additional item to be able to select the 'answers__some_dict' key.
-                items.append((new_key, json.dumps(v)))
+            #  Note: without the following line, all the keys will be flattened
+            #  including nested dictionaries.
+            #  For example:
+            #      {'answers': {'q1': 'some_string', 'some_dict': {'q2': 'some_string2'}}}
+            #  will be transformed to
+            #      [('answers__q1', 'some_string'), ('answers__some_dict__q2', 'some_string2')]
+            #  so we need to add an additional item to be able to select the 'answers__some_dict' key.
+            items.append((new_key, json.dumps(v)))
         else:
             items.append((new_key, json.dumps(v) if type(v) is list else v))
     return dict(items)
