@@ -46,6 +46,7 @@ _JSONSCHEMA_TYPE_CAN_CAST_TO = {
 def get_usable_types(types):
     # Null is not usable as a discrete type (all types are nullable)
     types = set(types) - {'null',}
+    # Return a new set that excludes any entry not in JSONSCHEMA_TYPES.
     return JSONSCHEMA_TYPES.intersection(types)
 
 
