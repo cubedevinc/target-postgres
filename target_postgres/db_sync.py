@@ -10,7 +10,7 @@ import itertools
 logger = singer.get_logger()
 
 
-JSONSCHEMA_TYPES = (
+JSONSCHEMA_TYPES = {
     'string',
     'number',
     'integer',
@@ -18,7 +18,7 @@ JSONSCHEMA_TYPES = (
     'array',
     'boolean',
     'null',
-)
+}
 
 
 JSONSCHEMA_TYPE_TO_POSTGRES_TYPE = {
@@ -42,10 +42,11 @@ _JSONSCHEMA_TYPE_CAN_CAST_TO = {
     'null': ()
 }
 
-JSONSCHEMA_UNSUPPORTED_TYPES = {
-    # `null` is supported in postgres, but not as a type.
-    'null',
-}
+
+def get_usable_types(types):
+    # Null is not usable as a discrete type (all types are nullable)
+    types = set(types) - {'null',}
+    return JSONSCHEMA_TYPES.intersection(types)
 
 
 def get_castable_types(target_type):
@@ -54,8 +55,7 @@ def get_castable_types(target_type):
     """
     accepts = set(_JSONSCHEMA_TYPE_CAN_CAST_TO.get(target_type, ()))
     accepts |= {target_type,}
-    accepts -= JSONSCHEMA_UNSUPPORTED_TYPES
-    return accepts
+    return get_usable_types(accepts)
 
 
 def most_general_type(types):
@@ -69,7 +69,7 @@ def most_general_type(types):
     """
     if not types:
         raise ValueError('most_general_type: types requires at least 1 entry')
-    types = set(types) - JSONSCHEMA_UNSUPPORTED_TYPES
+    types = get_usable_types(types)
 
     best_score, best_type = 0, None
 
@@ -84,8 +84,8 @@ def most_general_type(types):
         if score > best_score:
             best_score, best_type = score, t
 
-    if not get_castable_types(best_type).issuperset(types):
-        # The best type we found can't accomodate all `types`, so return
+    if best_type is None or not get_castable_types(best_type).issuperset(types):
+        # bet_type is either None or can't accomodate all `types`, so return
         # `string`, which is the most general type of all.
         best_type = 'string'
 

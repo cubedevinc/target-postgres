@@ -257,7 +257,7 @@ def test_record_primary_key_string(record, key_props: list, expected: str, dbsyn
     'types, expected',
     [
         # string always wins
-        (JSONSCHEMA_TYPES, 'string'),  
+        (sorted(tuple(JSONSCHEMA_TYPES)), 'string'),
         (('string', 'number'), 'string'),
 
         (('integer', 'number'), 'number'),
@@ -273,6 +273,7 @@ def test_record_primary_key_string(record, key_props: list, expected: str, dbsyn
         (('fake type 1', 'fake type 2', 'fake type 3'), 'string'),
 
         (('null', 'object'), 'object'),
+        (['number', None], 'number'),
     ],
     ids=str
 )
