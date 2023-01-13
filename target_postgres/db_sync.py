@@ -64,9 +64,8 @@ def most_general_type(types):
     Figures out the most general type in the list, which allows us to make a
     more intelligent choice about which postgres data type to use.
 
-    A type G is more general than a type T iff `cast(g AS t)` losslessly
-    converts g to t without error where `g` is of type `G` and `t` is of type
-    `T`.
+    A type G is more general than a type T iff `cast(t::T AS G)` losslessly
+    converts between the types without error.
     """
     if not types:
         raise ValueError('most_general_type: types requires at least 1 entry')
