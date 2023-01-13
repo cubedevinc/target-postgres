@@ -271,8 +271,10 @@ def test_record_primary_key_string(record, key_props: list, expected: str, dbsyn
         (('array', 'null', 'boolean'), 'string'),
         # We don't know about these thypes, so again assume string is best
         (('fake type 1', 'fake type 2', 'fake type 3'), 'string'),
+
+        (('null', 'object'), 'object'),
     ],
-    ids=repr
+    ids=str
 )
 def test_most_general_type(types, expected):
     assert most_general_type(types) == expected

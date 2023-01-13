@@ -42,6 +42,11 @@ _JSONSCHEMA_TYPE_CAN_CAST_TO = {
     'null': ()
 }
 
+JSONSCHEMA_UNSUPPORTED_TYPES = {
+    # `null` is supported in postgres, but not as a type.
+    'null',
+}
+
 
 def get_castable_types(target_type):
     """
@@ -49,6 +54,7 @@ def get_castable_types(target_type):
     """
     accepts = set(_JSONSCHEMA_TYPE_CAN_CAST_TO.get(target_type, ()))
     accepts |= {target_type,}
+    accepts -= JSONSCHEMA_UNSUPPORTED_TYPES
     return accepts
 
 
@@ -63,7 +69,7 @@ def most_general_type(types):
     """
     if not types:
         raise ValueError('most_general_type: types requires at least 1 entry')
-    types = set(types)
+    types = set(types) - JSONSCHEMA_UNSUPPORTED_TYPES
 
     best_score, best_type = 0, None
 
