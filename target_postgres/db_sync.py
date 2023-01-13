@@ -68,7 +68,8 @@ def most_general_type(types):
     converts between the types without error.
     """
     if not types:
-        raise ValueError('most_general_type: types requires at least 1 entry')
+        return 'string'
+
     types = get_usable_types(types)
 
     best_score, best_type = 0, None
