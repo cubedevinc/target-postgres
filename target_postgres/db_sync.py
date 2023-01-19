@@ -10,25 +10,109 @@ import itertools
 logger = singer.get_logger()
 
 
+JSONSCHEMA_TYPES = {
+    'string',
+    'number',
+    'integer',
+    'object',
+    'array',
+    'boolean',
+    'null',
+}
+
+
+JSONSCHEMA_TYPE_TO_POSTGRES_TYPE = {
+    'string': 'character varying',
+    'number': 'numeric',
+    'integer': 'bigint',
+    'object': 'jsonb',
+    'array': 'jsonb',
+    'boolean': 'boolean',
+}
+
+
+_JSONSCHEMA_TYPE_CAN_CAST_TO = {
+    'string': JSONSCHEMA_TYPES,
+    'number': ('integer', 'boolean'),
+    'integer': ('boolean',),
+    'object': ('array',),
+    'array': (),
+    'boolean': (),
+    # We never want to cast a non-null to null
+    'null': ()
+}
+
+
+def get_usable_types(types):
+    # Null is not usable as a discrete type (all types are nullable)
+    types = set(types) - {'null',}
+    # Return a new set that excludes any entry not in JSONSCHEMA_TYPES.
+    return JSONSCHEMA_TYPES.intersection(types)
+
+
+def get_castable_types(target_type):
+    """
+    Returns the set of types that can be safely converted to target_type
+    """
+    accepts = set(_JSONSCHEMA_TYPE_CAN_CAST_TO.get(target_type, ()))
+    accepts |= {target_type,}
+    return get_usable_types(accepts)
+
+
+def most_general_type(types):
+    """
+    Figures out the most general type in the list, which allows us to make a
+    more intelligent choice about which postgres data type to use.
+
+    A type G is generalizes to a type T iff `cast(t::T AS G)` losslessly
+    converts between the types without error. First we find the type that
+    generalizes to the most other types in `types`. If that type can generalize
+    to every type in types, we return it. If it can't, then we return 'string',
+    as it is the most general type.
+    """
+    if not types:
+        return 'string'
+
+    types = get_usable_types(types)
+
+    best_score, best_type = 0, None
+
+    # Iterate over sorted types so that the same type always wins if two types
+    # have equal scores.
+    for t in sorted(types):
+        castable_types = get_castable_types(t)
+        # The score is the number of types in `types` that can be cast to the
+        # type `t`. The most general one is the one that accepts the most casts
+        # to it.
+        score = len(castable_types.intersection(types))
+        if score > best_score:
+            best_score, best_type = score, t
+
+    if best_type is None or not get_castable_types(best_type).issuperset(types):
+        # bet_type is either None or can't accomodate all `types`, so return
+        # `string`, which is the most general type of all.
+        best_type = 'string'
+
+    return best_type
+
+
 def column_type(schema_property):
-    property_type = schema_property['type']
     property_format = schema_property['format'] if 'format' in schema_property else None
-    if 'object' in property_type or 'array' in property_type:
-        return 'jsonb'
-    elif property_format == 'date-time':
-        return 'timestamp with time zone'
-    elif property_format == 'date':
-        return 'date'
-    elif 'number' in property_type:
-        return 'numeric'
-    elif 'integer' in property_type and 'string' in property_type:
-        return 'character varying'
-    elif 'boolean' in property_type:
-        return 'boolean'
-    elif 'integer' in property_type:
-        return 'bigint'
-    else:
-        return 'character varying'
+    types = schema_property['type']
+    if isinstance(types, (str, bytes)):
+        types = [types]
+    concrete_type = most_general_type(types)
+
+    if concrete_type == 'string':
+        # jsonschema doesn't have a type for dates, so we need to go by the format
+        if property_format == 'date-time':
+            return 'timestamp with time zone'
+        elif property_format == 'date':
+            return 'date'
+
+    if concrete_type not in JSONSCHEMA_TYPE_TO_POSTGRES_TYPE:
+        concrete_type = 'string'
+    return JSONSCHEMA_TYPE_TO_POSTGRES_TYPE[concrete_type]
 
 
 def inflect_name(name):

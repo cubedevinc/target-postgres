@@ -1,6 +1,7 @@
+from collections import namedtuple
 import pytest
 from copy import deepcopy
-from target_postgres.db_sync import DbSync, column_type, flatten_record, flatten_schema
+from target_postgres.db_sync import DbSync, column_type, flatten_record, flatten_schema, most_general_type, JSONSCHEMA_TYPES
 
 BASE_SCHEMA = {
     'type': 'SCHEMA',
@@ -57,13 +58,18 @@ def dbsync_class():
         ({'type': ['array']}, 'jsonb'),
         ({'type': ['object', 'array'], 'format': 'date-time'}, 'jsonb'),
         ({'type': ['string'], 'format': 'date-time'}, 'timestamp with time zone'),
-        ({'type': ['boolean', 'integer', 'number'], 'format': 'date'}, 'date'),
+        ({'type': ['boolean', 'integer', 'number'], 'format': 'date'}, 'numeric'),
         ({'type': ['boolean', 'integer', 'number']}, 'numeric'),
         ({'type': ['integer', 'string']}, 'character varying'),
-        ({'type': ['boolean', 'integer']}, 'boolean'),
+        ({'type': ['boolean', 'integer']}, 'bigint'),
         ({'type': ['integer']}, 'bigint'),
         ({'type': ['string']}, 'character varying'),
-    ]
+        ({'type': ['null', 'array', 'string'], 'items': {'type': ['null', 'string']}}, 'character varying'),
+
+        # Ensure we don't get errors when we use an invalid type
+        ({'type': ['NOT A REAL TYPE!']}, 'character varying'),
+    ],
+    ids=repr
 )
 def test_column_type(prop: dict, expected: str):
     assert column_type(prop) == expected
@@ -245,3 +251,31 @@ def test_record_to_csv_row(record: dict, expected: list, dbsync_class: DbSync):
 def test_record_primary_key_string(record, key_props: list, expected: str, dbsync_class: DbSync):
     dbsync_class.stream_schema_message['key_properties'] = key_props
     assert dbsync_class.record_primary_key_string(record) == expected
+
+
+@pytest.mark.parametrize(
+    'types, expected',
+    [
+        # string always wins
+        (sorted(tuple(JSONSCHEMA_TYPES)), 'string'),
+        (('string', 'number'), 'string'),
+
+        (('integer', 'number'), 'number'),
+        (('boolean', 'integer', 'number'), 'number'),
+        (('boolean', 'integer'), 'integer'),
+
+        (('null', 'string'), 'string'),
+        (('array', 'object'), 'object'),
+
+        # None of these types generalize to each other, so we need to choose string as the general type
+        (('array', 'null', 'boolean'), 'string'),
+        # We don't know about these thypes, so again assume string is best
+        (('fake type 1', 'fake type 2', 'fake type 3'), 'string'),
+
+        (('null', 'object'), 'object'),
+        (['number', None], 'number'),
+    ],
+    ids=str
+)
+def test_most_general_type(types, expected):
+    assert most_general_type(types) == expected
