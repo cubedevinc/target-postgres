@@ -1,3 +1,4 @@
+import sys
 import json
 import psycopg2
 import psycopg2.extras
@@ -192,8 +193,11 @@ def flatten_record(d, parent_key=[], sep='__'):
 
     for k, v in d.items():
         new_key = flatten_key(k, parent_key, sep)
-        mutable_class = collections.abc.MutableMapping if hasattr(collections, 'abc') else collections.MutableMapping
-        if isinstance(v, mutable_class):
+        if sys.version_info.minor >= 10:
+            from collections.abc import MutableMapping
+        else:
+            from collections import MutableMapping # pylint: disable=E0611
+        if isinstance(v, MutableMapping):
             items.extend(flatten_record(v, parent_key + [k], sep=sep).items())
             #  Note: without the following line, all the keys will be flattened
             #  including nested dictionaries.
