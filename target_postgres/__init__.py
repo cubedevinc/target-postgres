@@ -25,10 +25,12 @@ logger = singer.get_logger()
 SANITIZE_RE = re.compile(
     r'\\u0000'  # Get rid of JSON encoded null bytes (postgres won't accept null bytes in json)
 )
+INVALID_ESCAPE_PATTERN = re.compile(r'\\[^"\\/bfnrtu]')
 
 
 def sanitize_line(line):
-    return SANITIZE_RE.sub('', line)
+    return INVALID_ESCAPE_PATTERN.sub('', SANITIZE_RE.sub('', line))
+
 
 
 def emit_state(state):
